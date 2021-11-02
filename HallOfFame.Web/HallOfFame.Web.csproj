@@ -22,5 +22,4 @@
     <ProjectReference Include="..\HallOfFame\HallOfFame.csproj" />
   </ItemGroup>
 
-
 </Project>

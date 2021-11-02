@@ -17,17 +17,17 @@ namespace HallOfFame.Web
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
             services.AddSwaggerGen();
-            services.AddDbContext<HallOfFameDbContext>(options => options.UseSqlServer(
-                "Server=(localdb)\\mssqllocaldb;Database=halloffamedb;Trusted_Connection=True;MultipleActiveResultSets=true"));
+
+            var connection = Configuration.GetConnectionString("DefaultConnection");
+            services.AddDbContext<HallOfFameDbContext>(options => options.UseSqlServer(connection));
             services.AddScoped<IPeopleRepository, PeopleRepository>();
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        // ReSharper disable once UnusedMember.Global
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
@@ -36,23 +36,11 @@ namespace HallOfFame.Web
             }
 
             app.UseSwagger();
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-            });
-
+            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1"));
             app.UseHttpsRedirection();
-
             app.UseRouting();
-
             app.UseAuthorization();
-
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllers();
-            });
-
-           
+            app.UseEndpoints(endpoints => endpoints.MapControllers());
         }
     }
 }

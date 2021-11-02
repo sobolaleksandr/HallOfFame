@@ -1,324 +1,157 @@
-﻿using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Text;
-using System.Net.Http;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.AspNetCore.Hosting;
-using HallOfFame.Web;
-using Xunit;
-using Newtonsoft.Json;
-
-namespace HallOfFame.IntegrationTest
+﻿namespace HallOfFame.IntegrationTest
 {
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Net;
+    using System.Net.Http;
+    using System.Text;
+    using System.Threading.Tasks;
+
+    using HallOfFame.Web;
+
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.AspNetCore.TestHost;
+    using Microsoft.Extensions.Configuration;
+
+    using Newtonsoft.Json;
+
+    using Xunit;
+
+    /// <summary>
+    /// Интеграционные тесты.
+    /// </summary>
     public class PeopleTest
     {
-        private readonly HttpClient _client;
-        private Person testPerson;
-
+        /// <summary>
+        /// Интеграционные тесты.
+        /// </summary>
         public PeopleTest()
         {
+            var configuration = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", false, true).Build();
+
             var server = new TestServer(new WebHostBuilder()
+                .UseStartup<Startup>()
                 .UseEnvironment("Development")
-                .UseStartup<Startup>());
+                .UseConfiguration(configuration));
+
             _client = server.CreateClient();
         }
 
-        [Fact] 
-        public async Task PeopleTests()
-        {
-            await CreatePerson_WithGoodModel_ReturnsOk();
-            await GetPersons_ReturnsPersons();
-            await UpdatePerson_WithGoodModel_ReturnsOk();
-            await GetPerson_ReturnsPerson();
-            await DeletePerson_WithGoodId_ReturnsOk();
-        }
+        /// <summary>
+        /// Клиент.
+        /// </summary>
+        private readonly HttpClient _client;
 
-        internal async Task CreatePerson_WithGoodModel_ReturnsOk()
+        /// <summary>
+        /// Модель для теста.
+        /// </summary>
+        private Person _testPerson;
+
+        /// <summary>
+        /// Строка запроса.
+        /// </summary>
+        private const string REQUEST_URI = "/api/v1/person/";
+
+        /// <summary>
+        /// Тест метода POST с валидной моделью.
+        /// </summary>
+        /// <returns> <see cref="HttpStatusCode.OK"/> </returns>
+        private async Task CreatePersonWithValidModel()
         {
-            // Arrange
-            Person person =
-            new Person
-            {
-                Name = "TestsName",
-                SkillsCollection =
-                new Skill[]
+            var person =
+                new Person
                 {
-                    new Skill
-                    {
-                        Name="TestSkill",
-                        Level = 9
-                    },
-                    new Skill
-                    {
-                        Name="TestSkill2",
-                        Level = 9
-                    }
-                }
-            };
+                    Name = TEST_NAME,
+                    SkillsCollection =
+                        new[]
+                        {
+                            new Skill
+                            {
+                                Name = "TestSkill",
+                                Level = 9
+                            },
+                            new Skill
+                            {
+                                Name = "TestSkill2",
+                                Level = 9
+                            }
+                        }
+                };
 
-            var body = JsonConvert.SerializeObject(person);
-            var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/person/")
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json")
-            };
+            var request = CreateRequest(person, HttpMethod.Post, REQUEST_URI);
 
-            // Act
             var response = await _client.SendAsync(request);
 
-            // Assert
             response.EnsureSuccessStatusCode();
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
 
-        [Fact]
-        internal async Task CreatePerson_WithBadModel_ReturnsBadRequest()
+        /// <summary>
+        /// Создать запрос.
+        /// </summary>
+        /// <param name="person"> Модель. </param>
+        /// <param name="method"> <see cref="HttpMethod"/></param>
+        /// <param name="requestUri"> Строка запроса. </param>
+        /// <returns> Возвращает запрос. </returns>
+        private static HttpRequestMessage CreateRequest(Person person, HttpMethod method, string requestUri)
         {
-            // Arrange
-            Person person =
-                    new Person
-                    {
-                        Name = "TestName",
-                        SkillsCollection =
-                        new Skill[]
-                        {
-                            new Skill
-                            {
-                                Name="TestSkill",
-                                Level = 11
-                            }
-                        }
-                    };
-
             var body = JsonConvert.SerializeObject(person);
-            var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/person/")
+            return new HttpRequestMessage(method, requestUri)
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json")
             };
-
-            // Act
-            var response = await _client.SendAsync(request);
-
-            // Assert
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
-        [Fact]
-        internal async Task CreatePerson_WithNull_ReturnsBadRequest()
+        /// <summary>
+        /// Тест метода GET с объектом в базе.
+        /// </summary>
+        /// <returns> <see cref="HttpStatusCode.OK"/> </returns>
+        private async Task GetPeople()
         {
-            // Arrange
-            Person person = null;
-
-            var body = JsonConvert.SerializeObject(person);
-            var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/person/")
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json")
-            };
-
-            // Act
-            var response = await _client.SendAsync(request);
-
-            // Assert
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        }
-
-        internal async Task GetPersons_ReturnsPersons()
-        {
-            // Arrange
             var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/persons");
 
-            // Act
-            var response = await _client.SendAsync(request);
-            var content = await response.Content.ReadAsStringAsync();
-            List<Person> jsonPersons = JsonConvert.DeserializeObject<List<Person>>(content);
-            testPerson = jsonPersons.Where(p => p.Name == "TestsName").FirstOrDefault();
+            var content = await GetContent(request);
+            var jsonPersons = JsonConvert.DeserializeObject<List<Person>>(content);
+            _testPerson = jsonPersons.FirstOrDefault(p => p.Name == TEST_NAME);
 
-            // Assert
-            response.EnsureSuccessStatusCode();
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.NotNull(_testPerson);
         }
 
-        internal async Task UpdatePerson_WithGoodModel_ReturnsOk()
+        /// <summary>
+        /// Тестовый атрибут.
+        /// </summary>
+        private const string TEST_NAME = "TestsName";
+
+        /// <summary>
+        /// Тест метода PUT с валидным ID и объектом в базе.
+        /// </summary>
+        /// <returns> <see cref="HttpStatusCode.OK"/> </returns>
+        private async Task UpdatePersonWithGoodModel()
         {
-            // Arrange
-            var skillsArray = testPerson.SkillsCollection.ToArray();
+            var skillsArray = _testPerson.SkillsCollection.ToArray();
             skillsArray[0].Level = 1;
             skillsArray[1].Level = 1;
-            long id = testPerson.Id;
+            var request = CreateRequest(_testPerson, HttpMethod.Put, ValidIdRequest);
 
-            var body = JsonConvert.SerializeObject(testPerson);
-            var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/person/{id}")
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json")
-            };
-            // Act
             var response = await _client.SendAsync(request);
 
-            // Assert
             response.EnsureSuccessStatusCode();
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
 
-        [Fact]
-        internal async Task UpdatePerson_WithNullId_ReturnBadRequest()
+        /// <summary>
+        /// Тест метода GET с валидным ID и объектом в базе.
+        /// </summary>
+        /// <returns> <see cref="HttpStatusCode.OK"/> </returns>
+        private async Task GetPersonWithExisting()
         {
-            // Arrange
-            long? id = null;
+            var request = new HttpRequestMessage(HttpMethod.Get, ValidIdRequest);
 
-            Person person =
-                    new Person
-                    {
-                        Id = 1,
-                        Name = "TestName",
-                        SkillsCollection =
-                        new Skill[]
-                        {
-                            new Skill
-                            {
-                                Name="TestSkill",
-                                Level = 1
-                            }
-                        }
-                    };
+            var content = await GetContent(request);
+            var jsonPerson = JsonConvert.DeserializeObject<Person>(content);
 
-            var body = JsonConvert.SerializeObject(person);
-            var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/person/{id}")
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json")
-            };
-
-            // Act
-            var response = await _client.SendAsync(request);
-
-            // Assert
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        }
-
-        [Fact]
-        internal async Task UpdatePerson_WithBadId_ReturnBadRequest()
-        {
-            // Arrange
-            long id = 1;
-
-            Person person =
-                    new Person
-                    {
-                        Id=12,
-                        Name = "TestName",
-                        SkillsCollection =
-                        new Skill[]
-                        {
-                            new Skill
-                            {
-                                Name="TestSkill",
-                                Level = 1
-                            }
-                        }
-                    };
-
-            var body = JsonConvert.SerializeObject(person);
-            var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/person/{id}")
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json")
-            };
-
-            // Act
-            var response = await _client.SendAsync(request);
-
-            // Assert
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        }
-
-        [Fact]
-        internal async Task UpdatePerson_WithBadModel_ReturnsBadRequest()
-        {
-            // Arrange
-            long id = 1;
-
-            Person person =
-                    new Person
-                    {
-                        Id = 1,
-                        Name = "TestName",
-                        SkillsCollection =
-                        new Skill[]
-                        {
-                            new Skill
-                            {
-                                Name="TestSkill",
-                                Level = 11
-                            }
-                        }
-                    };
-
-            var body = JsonConvert.SerializeObject(person);
-            var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/person/{id}")
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json")
-            };
-            // Act
-            var response = await _client.SendAsync(request);
-
-            // Assert
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        }
-
-        [Fact]
-        internal async Task UpdatePerson_WithNonExistingPerson_ReturnsNotFound()
-        {
-            // Arrange
-            long id = long.MaxValue;
-
-            Person person =
-            new Person
-            {
-                Id = id,
-                Name = "TestsName",
-                SkillsCollection =
-                new Skill[]
-                {
-                    new Skill
-                    {
-                        Name="TestSkill",
-                        Level = 9
-                    },
-                    new Skill
-                    {
-                        Name="TestSkill2",
-                        Level = 9
-                    }
-                }
-            };
-
-            var body = JsonConvert.SerializeObject(person);
-            var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/person/{id}")
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json")
-            };
-            // Act
-            var response = await _client.SendAsync(request);
-
-            // Assert
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        }
-
-        internal async Task GetPerson_ReturnsPerson()
-        {
-            // Arrange
-            long id = testPerson.Id;
-            var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/person/{id}");
-
-            // Act
-            var response = await _client.SendAsync(request);
-            var content = await response.Content.ReadAsStringAsync();
-            Person jsonPerson = JsonConvert.DeserializeObject<Person>(content);
-
-            // Assert
-            response.EnsureSuccessStatusCode();
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-            Assert.Equal("TestsName", jsonPerson.Name);
+            Assert.Equal(TEST_NAME, jsonPerson.Name);
             Assert.Null(jsonPerson.DisplayName);
 
             var skillsArray = jsonPerson.SkillsCollection.ToArray();
@@ -330,46 +163,253 @@ namespace HallOfFame.IntegrationTest
             Assert.Equal(1, skillsArray[1].Level);
         }
 
-        [Fact]
-        internal async Task GetPerson_ReturnsNotFound()
+        /// <summary>
+        /// Получить содержимое ответа. 
+        /// </summary>
+        /// <param name="request"> Запрос. </param>
+        /// <returns> Содержимое ответа. </returns>
+        private async Task<string> GetContent(HttpRequestMessage request)
         {
-            // Arrange
-            long id = long.MaxValue;
-            var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/person/{id}");
-
-            // Act
             var response = await _client.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
 
-            // Assert
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            response.EnsureSuccessStatusCode();
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            return content;
         }
 
-        internal async Task DeletePerson_WithGoodId_ReturnsOk()
+        /// <summary>
+        /// Тест метода DELETE с валидным ID и объектом в базе.
+        /// </summary>
+        /// <returns> <see cref="HttpStatusCode.OK"/> </returns>
+        private async Task DeletePersonWithGoodId()
         {
-            // Arrange
-            long id = testPerson.Id;
-            var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/person/{id}");
+            var request = new HttpRequestMessage(HttpMethod.Delete, ValidIdRequest);
 
-            // Act
             var response = await _client.SendAsync(request);
 
-            // Assert
             response.EnsureSuccessStatusCode();
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
 
-        [Fact]
-        internal async Task DeletePerson_WithBadId_ReturnsNotFound()
-        {
-            // Arrange
-            long id = long.MaxValue;
-            var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/person/{id}");
+        /// <summary>
+        /// Запрос с валидным ID.
+        /// </summary>
+        private string ValidIdRequest => REQUEST_URI + _testPerson.Id;
 
-            // Act
+        /// <summary>
+        /// Запрос с невалидным ID.
+        /// </summary>
+        private static string InValidIdRequest => REQUEST_URI + long.MaxValue;
+
+        /// <summary>
+        /// Тест метода POST c невалидной моделью.
+        /// </summary>
+        /// <returns> <see cref="HttpStatusCode.BadRequest"/> </returns>
+        [Fact]
+        internal async Task CreatePersonWithBadModel()
+        {
+            var person =
+                new Person
+                {
+                    Name = "TestName",
+                    SkillsCollection =
+                        new[]
+                        {
+                            new Skill
+                            {
+                                Name = "TestSkill",
+                                Level = 11
+                            }
+                        }
+                };
+
+            var request = CreateRequest(person, HttpMethod.Post, REQUEST_URI);
+
             var response = await _client.SendAsync(request);
 
-            // Assert
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        /// <summary>
+        /// Тест метода POST c невалидной моделью.
+        /// </summary>
+        /// <returns> <see cref="HttpStatusCode.BadRequest"/> </returns>
+        [Fact]
+        internal async Task CreatePersonWithNull()
+        {
+            var request = CreateRequest(null, HttpMethod.Post, REQUEST_URI);
+
+            var response = await _client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        /// <summary>
+        /// Тест метода DELETE c невалидным ID.
+        /// </summary>
+        /// <returns> <see cref="HttpStatusCode.NotFound"/> </returns>
+        [Fact]
+        internal async Task DeletePersonWithBadId()
+        {
+            var request = new HttpRequestMessage(HttpMethod.Delete, InValidIdRequest);
+
+            var response = await _client.SendAsync(request);
+
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        /// <summary>
+        /// Тест метода GET объекта, которого нет в базе.
+        /// </summary>
+        /// <returns> <see cref="HttpStatusCode.NotFound"/> </returns>
+        [Fact]
+        internal async Task GetNonExistingPerson()
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, InValidIdRequest);
+
+            var response = await _client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        /// <summary>
+        /// CRUD-операции.
+        /// </summary>
+        [Fact]
+        public async Task PeopleTests()
+        {
+            await CreatePersonWithValidModel();
+            await GetPeople();
+            await UpdatePersonWithGoodModel();
+            await GetPersonWithExisting();
+            await DeletePersonWithGoodId();
+        }
+
+        /// <summary>
+        /// Тест метода UPDATE с невалидным ID.
+        /// </summary>
+        /// <returns> <see cref="HttpStatusCode.BadRequest"/> </returns>
+        [Fact]
+        internal async Task UpdatePersonWithBadId()
+        {
+            const long id = 1;
+            var person =
+                new Person
+                {
+                    Id = 12,
+                    Name = "TestName",
+                    SkillsCollection =
+                        new[]
+                        {
+                            new Skill
+                            {
+                                Name = "TestSkill",
+                                Level = 1
+                            }
+                        }
+                };
+
+            var request = CreateRequest(person, HttpMethod.Put, REQUEST_URI + id);
+
+            var response = await _client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        /// <summary>
+        /// Тест метода PUT с невалидной моделью.
+        /// </summary>
+        /// <returns> <see cref="HttpStatusCode.BadRequest" /></returns>
+        [Fact]
+        internal async Task UpdatePersonWithBadModel()
+        {
+            const long id = 1;
+            var person =
+                new Person
+                {
+                    Id = id,
+                    Name = "TestName",
+                    SkillsCollection =
+                        new[]
+                        {
+                            new Skill
+                            {
+                                Name = "TestSkill",
+                                Level = 11
+                            }
+                        }
+                };
+
+            var request = CreateRequest(person, HttpMethod.Put, REQUEST_URI + id);
+
+            var response = await _client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        /// <summary>
+        /// Тест метода PUT с несуществующим объектом. 
+        /// </summary>
+        /// <returns> <see cref="HttpStatusCode.NotFound" /></returns>
+        [Fact]
+        internal async Task UpdatePersonWithNonExistingPerson()
+        {
+            var person =
+                new Person
+                {
+                    Id = long.MaxValue,
+                    Name = TEST_NAME,
+                    SkillsCollection =
+                        new[]
+                        {
+                            new Skill
+                            {
+                                Name = "TestSkill",
+                                Level = 9
+                            },
+                            new Skill
+                            {
+                                Name = "TestSkill2",
+                                Level = 9
+                            }
+                        }
+                };
+
+            var request = CreateRequest(person, HttpMethod.Put, InValidIdRequest);
+
+            var response = await _client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        /// <summary>
+        /// Тест метода PUT с null в строке запроса
+        /// </summary>
+        /// <returns> <see cref="HttpStatusCode.BadRequest" /></returns>
+        [Fact]
+        internal async Task UpdatePersonWithNullId()
+        {
+            var person = new Person
+            {
+                Id = 1,
+                Name = "TestName",
+                SkillsCollection =
+                    new[]
+                    {
+                        new Skill
+                        {
+                            Name = "TestSkill",
+                            Level = 1
+                        }
+                    }
+            };
+
+            var request = CreateRequest(person, HttpMethod.Put, REQUEST_URI + (long?)null);
+
+            var response = await _client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
     }
 }
