@@ -28,7 +28,10 @@
         {
             var person = await _context.People.FindAsync(id);
             if (person == null)
+            {
+                
                 return null;
+            }
 
             _context.People.Remove(person);
             await _context.SaveChangesAsync();

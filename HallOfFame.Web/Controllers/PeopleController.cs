@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HallOfFame.Web.Controllers
 {
+    using Newtonsoft.Json;
+
     /// <summary>
     /// Контроллер для модели <see cref="Person"/>
     /// </summary>
@@ -51,7 +53,7 @@ namespace HallOfFame.Web.Controllers
                 return new ObjectResult(person);
             }
 
-            FileLogger.Warn($"{id} not found");
+            FileLogger.Warn($"Get {id} not found");
             return NotFound();
         }
 
@@ -64,41 +66,61 @@ namespace HallOfFame.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> CreatePerson(Person person)
         {
+            var serializedPerson = JsonConvert.SerializeObject(person);
             if (person != null && ModelState.IsValid)
             {
                 if (await _peopleRepository.TryToCreatePerson(person))
                 {
-                    FileLogger.Debug("Post", person);
+                    FileLogger.Debug("Post succeeded", serializedPerson);
                     return Ok();
                 }
             }
 
-            FileLogger.Warn($"Post failed");
+            FileLogger.Warn($"Post failed {serializedPerson}");
             return BadRequest();
         }
 
+        /// <summary>
+        /// Обновить сотрудника. 
+        /// </summary>
+        /// <param name="id"> ID-сотрудника. </param>
+        /// <param name="person"> Модель сотрудника. </param>
+        /// <returns> <see cref="OkResult"/> если получилось обновить, <see cref="NotFoundResult"/> если сотрудника нет в базе данных, <see cref="BadRequestResult"/> если неверная модель запроса. </returns>
         [HttpPut("api/v1/person/{id?}")]
         public async Task<IActionResult> UpdatePerson(long? id, Person person)
         {
-            if (!ModelState.IsValid || !id.HasValue)
+            if (!ModelState.IsValid || !id.HasValue || id != person.Id)
+            {
+                FileLogger.Warn($"Put BadRequest {id}");
                 return BadRequest();
-
-            if (id != person.Id)
-                return BadRequest();
+            }
 
             if (await _peopleRepository.TryToUpdatePerson(id.Value, person))
+            {
+                FileLogger.Debug($"Put succeeded {id}", person);
                 return Ok();
+            }
 
+            FileLogger.Warn($"Put NotFound {id}");
             return NotFound();
         }
 
+        /// <summary>
+        /// Удалить сотрудника.
+        /// </summary>
+        /// <param name="id"> ID-сотрудника. </param>
+        /// <returns> <see cref="OkResult"/> если получилось удалить, <see cref="NotFoundResult"/> если сотрудника нет в базе данных. </returns>
         [HttpDelete("api/v1/person/{id}")]
         public async Task<IActionResult> DeletePerson(long id)
         {
             var person = await _peopleRepository.DeletePerson(id);
             if (person == null)
+            {
+                FileLogger.Warn($"Delete NotFound {id}");
                 return NotFound();
+            }
 
+            FileLogger.Debug($"Delete NotFound {id}");
             return Ok();
         }
     }

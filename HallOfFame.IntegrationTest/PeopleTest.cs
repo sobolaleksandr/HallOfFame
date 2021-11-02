@@ -93,7 +93,7 @@
         /// <param name="person"> Модель. </param>
         /// <param name="method"> <see cref="HttpMethod"/></param>
         /// <param name="requestUri"> Строка запроса. </param>
-        /// <returns> Возвращает запрос. </returns>
+        /// <returns> Запрос. </returns>
         private static HttpRequestMessage CreateRequest(Person person, HttpMethod method, string requestUri)
         {
             var body = JsonConvert.SerializeObject(person);
