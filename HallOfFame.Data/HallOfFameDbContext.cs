@@ -1,16 +1,28 @@
-﻿using Microsoft.EntityFrameworkCore;
-
-namespace HallOfFame.Data
+﻿namespace HallOfFame.Data
 {
+    using Microsoft.EntityFrameworkCore;
+
+    /// <summary>
+    /// Контекст данных.
+    /// </summary>
     public class HallOfFameDbContext : DbContext
     {
-        public DbSet<Person> People { get; set; }
-        public DbSet<Skill> Skills { get; set; }
-
+        /// <summary>
+        /// Контекст данных.
+        /// </summary>
         public HallOfFameDbContext(DbContextOptions<HallOfFameDbContext> options)
             : base(options)
         {
         }
-    }
 
+        /// <summary>
+        /// Таблица сотрудников.
+        /// </summary>
+        public DbSet<Person> People { get; set; }
+
+        /// <summary>
+        /// Таблица навыков.
+        /// </summary>
+        public DbSet<Skill> Skills { get; set; }
+    }
 }
