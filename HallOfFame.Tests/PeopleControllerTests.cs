@@ -1,7 +1,5 @@
 namespace HallOfFame.Tests
 {
-    using System.Collections.Generic;
-    using System.Linq;
     using System.Threading.Tasks;
 
     using HallOfFame.Web.Controllers;
@@ -21,7 +19,7 @@ namespace HallOfFame.Tests
         /// Получить тестовый список сотрудников.
         /// </summary>
         /// <returns> Список сотрудников. </returns>
-        private static IEnumerable<Person> GetPeople()
+        private static Person[] GetPeople()
         {
             return new[]
             {
@@ -68,7 +66,7 @@ namespace HallOfFame.Tests
         /// Тестовая модель.
         /// </summary>
         private readonly Person _person =
-            new Person
+            new()
             {
                 Id = VALID_TEST_ID,
                 Name = "",
@@ -103,7 +101,29 @@ namespace HallOfFame.Tests
         /// </summary>
         /// <returns> Код 200. </returns>
         [Fact]
-        public async Task CreatePerson()
+        public async Task CreatePerson_RepoReturnsFalse()
+        {
+            var mock = new Mock<IPeopleRepository>();
+            mock.Setup(repo => repo.TryToCreatePerson(It.IsAny<Person>()))
+                .ReturnsAsync(false)
+                .Verifiable();
+
+            var controller = new PeopleController(mock.Object);
+            var newPerson = new Person();
+
+            var result = await controller.CreatePerson(newPerson);
+
+            var viewResult = Assert.IsType<BadRequestResult>(result);
+            Assert.Equal(400, viewResult?.StatusCode);
+            mock.Verify(repo => repo.TryToCreatePerson(It.IsAny<Person>()), Times.Once());
+        }
+
+        /// <summary>
+        /// Тест метода CreatePerson с валидной моедлью. 
+        /// </summary>
+        /// <returns> Код 200. </returns>
+        [Fact]
+        public async Task CreatePerson_Valid()
         {
             var mock = new Mock<IPeopleRepository>();
             mock.Setup(repo => repo.TryToCreatePerson(It.IsAny<Person>()))
@@ -117,7 +137,7 @@ namespace HallOfFame.Tests
 
             var viewResult = Assert.IsType<OkResult>(result);
             Assert.Equal(200, viewResult?.StatusCode);
-            mock.Verify();
+            mock.Verify(repo => repo.TryToCreatePerson(It.IsAny<Person>()), Times.Once());
         }
 
         /// <summary>
@@ -125,7 +145,7 @@ namespace HallOfFame.Tests
         /// </summary>
         /// <returns> Ошибку 400. </returns>
         [Fact]
-        public async Task CreatePersonWithBadModel()
+        public async Task CreatePerson_WithBadModel()
         {
             var mock = new Mock<IPeopleRepository>();
             var controller = new PeopleController(mock.Object);
@@ -143,7 +163,7 @@ namespace HallOfFame.Tests
         /// </summary>
         /// <returns> Код 400. </returns>
         [Fact]
-        public async Task CreatePersonWithExistingPerson()
+        public async Task CreatePerson_WithExistingPerson()
         {
             var mock = new Mock<IPeopleRepository>();
             var controller = new PeopleController(mock.Object);
@@ -159,7 +179,7 @@ namespace HallOfFame.Tests
         /// </summary>
         /// <returns> Код 400. </returns>
         [Fact]
-        public async Task CreatePersonWithNull()
+        public async Task CreatePerson_WithNull()
         {
             var mock = new Mock<IPeopleRepository>();
             var controller = new PeopleController(mock.Object);
@@ -175,7 +195,7 @@ namespace HallOfFame.Tests
         /// </summary>
         /// <returns> Код 200. </returns>
         [Fact]
-        public async Task DeletePerson()
+        public async Task DeletePerson_Valid()
         {
             var mock = new Mock<IPeopleRepository>();
             mock.Setup(repo => repo.DeletePerson(VALID_TEST_ID))
@@ -188,7 +208,7 @@ namespace HallOfFame.Tests
 
             var viewResult = Assert.IsType<OkResult>(result);
             Assert.Equal(200, viewResult?.StatusCode);
-            mock.Verify();
+            mock.Verify(repo => repo.DeletePerson(VALID_TEST_ID), Times.Once);
         }
 
         /// <summary>
@@ -196,7 +216,7 @@ namespace HallOfFame.Tests
         /// </summary>
         /// <returns> Код 404. </returns>
         [Fact]
-        public async Task DeletePersonWithNonExistingPerson()
+        public async Task DeletePerson_WithNonExistingPerson()
         {
             var mock = new Mock<IPeopleRepository>();
             mock.Setup(repo => repo.DeletePerson(VALID_TEST_ID))
@@ -209,7 +229,7 @@ namespace HallOfFame.Tests
 
             var viewResult = Assert.IsType<NotFoundResult>(result);
             Assert.Equal(404, viewResult?.StatusCode);
-            mock.Verify();
+            mock.Verify(repo => repo.DeletePerson(VALID_TEST_ID), Times.Once);
         }
 
         /// <summary>
@@ -217,7 +237,7 @@ namespace HallOfFame.Tests
         /// </summary>
         /// <returns> Модель сотрудника. </returns>
         [Fact]
-        public async Task GetPerson()
+        public async Task GetPerson_Valid()
         {
             var mock = new Mock<IPeopleRepository>();
             mock.Setup(repo => repo.GetPerson(VALID_TEST_ID))
@@ -231,26 +251,7 @@ namespace HallOfFame.Tests
             var viewResult = Assert.IsType<ActionResult<Person>>(result);
             var model = Assert.IsAssignableFrom<ObjectResult>(viewResult.Result);
             Assert.Equal(_person, model.Value);
-            mock.Verify();
-        }
-
-        /// <summary>
-        /// Тест метода GetPerson.
-        /// </summary>
-        /// <returns> Коллекцию сотрудников. </returns>
-        [Fact]
-        public async Task GetPersons()
-        {
-            var mock = new Mock<IPeopleRepository>();
-            mock.Setup(repo => repo.GetPeople())
-                .Returns(Task.FromResult(GetPeople().ToArray()));
-
-            var controller = new PeopleController(mock.Object);
-
-            var result = await controller.GetPersons();
-
-            var viewResult = Assert.IsAssignableFrom<Person[]>(result);
-            Assert.Equal(2, viewResult.Length);
+            mock.Verify(repo => repo.GetPerson(VALID_TEST_ID), Times.Once);
         }
 
         /// <summary>
@@ -258,7 +259,7 @@ namespace HallOfFame.Tests
         /// </summary>
         /// <returns> Код 404. </returns>
         [Fact]
-        public async Task GetPersonWithBadId()
+        public async Task GetPerson_WithBadId()
         {
             var mock = new Mock<IPeopleRepository>();
             mock.Setup(repo => repo.GetPerson(INVALID_TEST_ID))
@@ -272,7 +273,28 @@ namespace HallOfFame.Tests
             var viewResult = Assert.IsType<ActionResult<Person>>(result);
             var model = Assert.IsAssignableFrom<NotFoundResult>(viewResult.Result);
             Assert.Equal(404, model?.StatusCode);
-            mock.Verify();
+            mock.Verify(repo => repo.GetPerson(INVALID_TEST_ID), Times.Once);
+        }
+
+        /// <summary>
+        /// Тест метода GetPerson.
+        /// </summary>
+        /// <returns> Коллекцию сотрудников. </returns>
+        [Fact]
+        public async Task GetPersons_Valid()
+        {
+            var mock = new Mock<IPeopleRepository>();
+            mock.Setup(repo => repo.GetPeople())
+                .Returns(Task.FromResult(GetPeople()))
+                .Verifiable();
+
+            var controller = new PeopleController(mock.Object);
+
+            var result = await controller.GetPersons();
+
+            var viewResult = Assert.IsAssignableFrom<Person[]>(result);
+            Assert.Equal(2, viewResult.Length);
+            mock.Verify(repo => repo.GetPeople(), Times.Once);
         }
 
         /// <summary>
@@ -280,7 +302,7 @@ namespace HallOfFame.Tests
         /// </summary>
         /// <returns> Код 200. </returns>
         [Fact]
-        public async Task UpdatePerson()
+        public async Task UpdatePerson_Valid()
         {
             var mock = new Mock<IPeopleRepository>();
             mock.Setup(repo => repo.TryToUpdatePerson(VALID_TEST_ID, It.IsAny<Person>()))
@@ -293,7 +315,7 @@ namespace HallOfFame.Tests
 
             var viewResult = Assert.IsType<OkResult>(result);
             Assert.Equal(200, viewResult?.StatusCode);
-            mock.Verify();
+            mock.Verify(repo => repo.TryToUpdatePerson(VALID_TEST_ID, It.IsAny<Person>()), Times.Once);
         }
 
         /// <summary>
@@ -301,7 +323,7 @@ namespace HallOfFame.Tests
         /// </summary>
         /// <returns> Код 400. </returns>
         [Fact]
-        public async Task UpdatePersonWithBadId()
+        public async Task UpdatePerson_WithBadId()
         {
             var mock = new Mock<IPeopleRepository>();
             var controller = new PeopleController(mock.Object);
@@ -317,7 +339,7 @@ namespace HallOfFame.Tests
         /// </summary>
         /// <returns> Код 400. </returns>
         [Fact]
-        public async Task UpdatePersonWithBadModel()
+        public async Task UpdatePerson_WithBadModel()
         {
             var mock = new Mock<IPeopleRepository>();
             var controller = new PeopleController(mock.Object);
@@ -334,7 +356,7 @@ namespace HallOfFame.Tests
         /// </summary>
         /// <returns> Код 404. </returns>
         [Fact]
-        public async Task UpdatePersonWithNonExistingPerson()
+        public async Task UpdatePerson_WithNonExistingPerson()
         {
             var mock = new Mock<IPeopleRepository>();
             mock.Setup(repo => repo.TryToUpdatePerson(VALID_TEST_ID, It.IsAny<Person>()))
@@ -347,7 +369,7 @@ namespace HallOfFame.Tests
 
             var viewResult = Assert.IsType<NotFoundResult>(result);
             Assert.Equal(404, viewResult?.StatusCode);
-            mock.Verify();
+            mock.Verify(repo => repo.TryToUpdatePerson(VALID_TEST_ID, It.IsAny<Person>()), Times.Once);
         }
 
         /// <summary>
@@ -355,7 +377,7 @@ namespace HallOfFame.Tests
         /// </summary>
         /// <returns> Код 400. </returns>
         [Fact]
-        public async Task UpdatePersonWithNullId()
+        public async Task UpdatePerson_WithNullId()
         {
             var mock = new Mock<IPeopleRepository>();
             var controller = new PeopleController(mock.Object);

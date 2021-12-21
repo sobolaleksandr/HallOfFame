@@ -82,7 +82,7 @@
         /// </summary>
         /// <returns> Модель сотрудника. </returns>
         [Fact]
-        public async Task DeletePerson()
+        public async Task DeletePerson_Valid()
         {
             await using var context = new HallOfFameDbContext(ContextOptions);
             var repo = new PeopleRepository(context);
@@ -104,7 +104,7 @@
         /// </summary>
         /// <returns> Null. </returns>
         [Fact]
-        public async Task DeletePersonWithBadId()
+        public async Task DeletePerson_WithBadId()
         {
             await using var context = new HallOfFameDbContext(ContextOptions);
             var repo = new PeopleRepository(context);
@@ -124,7 +124,7 @@
         /// </summary>
         /// <returns> Коллекцию сотрудников. </returns>
         [Fact]
-        public async Task GetPeople()
+        public async Task GetPeople_Valid()
         {
             await using var context = new HallOfFameDbContext(ContextOptions);
             var repo = new PeopleRepository(context);
@@ -157,26 +157,11 @@
         }
 
         /// <summary>
-        /// Тест метода GetPerson с невалидным ID.
-        /// </summary>
-        /// <returns> Null. </returns>
-        [Fact]
-        public async Task GetPersonWithBadId()
-        {
-            await using var context = new HallOfFameDbContext(ContextOptions);
-            var repo = new PeopleRepository(context);
-
-            var person = await repo.GetPerson(INVALID_TEST_ID);
-
-            Assert.Null(person);
-        }
-
-        /// <summary>
         /// Тест метода GetPerson с валидным ID.
         /// </summary>
         /// <returns> Модель сотрудника. </returns>
         [Fact]
-        public async Task GetPersonWithGoodId()
+        public async Task GetPerson_Valid()
         {
             await using var context = new HallOfFameDbContext(ContextOptions);
             var repo = new PeopleRepository(context);
@@ -196,11 +181,26 @@
         }
 
         /// <summary>
+        /// Тест метода GetPerson с невалидным ID.
+        /// </summary>
+        /// <returns> Null. </returns>
+        [Fact]
+        public async Task GetPerson_WithBadId()
+        {
+            await using var context = new HallOfFameDbContext(ContextOptions);
+            var repo = new PeopleRepository(context);
+
+            var person = await repo.GetPerson(INVALID_TEST_ID);
+
+            Assert.Null(person);
+        }
+
+        /// <summary>
         /// Тест метода TryToCreatePerson с новым объектом.
         /// </summary>
         /// <returns> True. </returns>
         [Fact]
-        public async Task TryToCreatePerson()
+        public async Task TryToCreatePerson_Valid()
         {
             await using var context = new HallOfFameDbContext(ContextOptions);
             var repo = new PeopleRepository(context);
@@ -235,7 +235,7 @@
         /// </summary>
         /// <returns> False. </returns>
         [Fact]
-        public async Task TryToCreatePersonWithExistingId()
+        public async Task TryToCreatePerson_WithExistingId()
         {
             await using var context = new HallOfFameDbContext(ContextOptions);
             var repo = new PeopleRepository(context);
@@ -270,7 +270,7 @@
         /// </summary>
         /// <returns> True. </returns>
         [Fact]
-        public async Task TryToUpdatePerson()
+        public async Task TryToUpdatePerson_Valid()
         {
             await using var context = new HallOfFameDbContext(ContextOptions);
             var repo = new PeopleRepository(context);
@@ -305,7 +305,7 @@
         /// </summary>
         /// <returns> False. </returns>
         [Fact]
-        public async Task TryToUpdatePersonWithBadId()
+        public async Task TryToUpdatePerson_WithBadId()
         {
             await using var context = new HallOfFameDbContext(ContextOptions);
             var repo = new PeopleRepository(context);

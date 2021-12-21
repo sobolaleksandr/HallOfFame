@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31005.135
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32014.148
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HallOfFame", "HallOfFame.csproj", "{8CE5DF1F-4B8A-4C58-B872-F6F2E31B9478}"
 EndProject
@@ -17,7 +17,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HallOfFame.Web", "..\HallOf
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HallOfFame.Tests", "..\HallOfFame.Tests\HallOfFame.Tests.csproj", "{AD57E59F-4FF2-48B0-9EFD-111F117DA76F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HallOfFame.IntegrationTest", "..\HallOfFame.IntegrationTest\HallOfFame.IntegrationTest.csproj", "{E8DACE26-77BF-4075-B630-40478A164086}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HallOfFame.IntegrationTest", "..\HallOfFame.IntegrationTest\HallOfFame.IntegrationTest.csproj", "{E8DACE26-77BF-4075-B630-40478A164086}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
